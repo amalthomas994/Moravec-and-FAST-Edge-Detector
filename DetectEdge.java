@@ -9,7 +9,7 @@ import java.util.stream.IntStream;
 public class DetectEdge extends Frame implements ActionListener {
 	BufferedImage input;
 	int width, height;
-	int lowT=20, highT=100;
+	int lowT=20, highT=100, fast_threshold=10;;
 	boolean useColorThreshold = false;
 	CanvasImage source, target;
 	CheckboxGroup metrics = new CheckboxGroup();
@@ -49,6 +49,9 @@ public class DetectEdge extends Frame implements ActionListener {
 		button = new Button("Moravec Detector");
 		button.addActionListener(this);
 		controls.add(button);
+		button = new Button("FAST Detector");
+		button.addActionListener(this);
+		controls.add(button);
 
 		final BufferedImage blurredImage = approximationFilter(source.image);
 		BufferedImage blurredImages = grayscale(blurredImage);
@@ -65,18 +68,18 @@ public class DetectEdge extends Frame implements ActionListener {
 			// target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
 
 		});
-		// JLabel label2 = new JLabel("highT=" + highT);
-		// label2.setPreferredSize(new Dimension(60, 20));
-		// controls.add(label2);
-		// JSlider slider2 = new JSlider(1, 128, highT);
-		// slider2.setPreferredSize(new Dimension(75, 20));
-		// controls.add(slider2);
-		// slider2.addChangeListener(changeEvent -> {
-		// 	// highT = slider2.getValue();
-		// 	label2.setText("highT=" + highT);
-		// 	target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
+		JLabel label2 = new JLabel("FAST Thresh=" + fast_threshold);
+		label2.setPreferredSize(new Dimension(150, 20));
+		controls.add(label2);
+		JSlider slider2 = new JSlider(0, 255, fast_threshold);
+		slider2.setPreferredSize(new Dimension(75, 20));
+		controls.add(slider2);
+		slider2.addChangeListener(changeEvent -> {
+			fast_threshold = slider2.getValue();
+			label2.setText("FAST Thresh=" + fast_threshold);
+			// target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
 
-		// });
+		});
 
 		// button = new Button("Thresholding");
 		// button.addActionListener(this);
@@ -119,7 +122,7 @@ public class DetectEdge extends Frame implements ActionListener {
 			target.resetImage(moravec(source.image));
 		} else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
 			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
-			target.resetImage(moravec(source.image));
+			target.resetImage(FAST(source.image));
 		}  
 	}
 
@@ -142,23 +145,61 @@ public class DetectEdge extends Frame implements ActionListener {
 		circle[14] = img.getRaster().getSample(p+2, q+2, 0);
 		circle[15] = img.getRaster().getSample(p+3, q+1, 0);
 
-
-
 		return circle;
 	}
 
 	public BufferedImage FAST(BufferedImage img) {
 		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		img = grayscale(img);
 		int n = 12;
-		for ( int q=1 ; q<height-1 ; q++ ) {
-			for ( int p=1 ; p<width-1 ; p++ ) { 
+		for ( int q=4 ; q<height-4 ; q++ ) {
+			for ( int p=4 ; p<width-4 ; p++ ) {
+				int initial_counter = 0;
+				int current_pixel_intensity = img.getRaster().getSample(p, q, 0);
 				int[] circle = bresenham_circle(p, q, img);
 				for (int i = 0; i < circle.length; i+=4){
-					
+					if ((current_pixel_intensity + fast_threshold) < circle[i] ||
+						(current_pixel_intensity - fast_threshold) > circle[i]) {
+							initial_counter++;
+							// System.out.println("Initial Counter: " + initial_counter);
+					}
+				}
+				if (initial_counter >= 3){
+					int second_counter = 0; 
+					for (int start = 0; start < circle.length; start++){
+						for (int i = start; i < circle.length + start; i++){
+							if ( circle.length+start>16) {
+								i = circle.length+start-16;
+							}
+							System.out.println(i);
+							if ((current_pixel_intensity + fast_threshold) < circle[i] ||
+								(current_pixel_intensity - fast_threshold) > circle[i]) {
+								second_counter++;
+								// System.out.println("Second Counter: " + second_counter);
+
+								if (second_counter == n){
+									result.setRGB(p, q, new Color(255, 255, 255).getRGB());
+								}
+									
+							} else{
+								second_counter = 0;
+							}
+						}
+					}
+
 				}
 			}
 		}
 		return result;
+	}
+
+		public int SAD(int p, int q, BufferedImage img){
+		int sad = 0;
+
+		for (int i = 0; i < 16; i++){ //If we want to change the r, we have to change 16 as well
+			sad = sad + Math.abs(img.getRaster().getSample(p, q, 0) - bresenham_circle(p, q, img)[i]);
+		}
+		return sad;
 	}
 
 
@@ -741,12 +782,29 @@ public class DetectEdge extends Frame implements ActionListener {
 		// }
 		return img;
 	}
-	
+	public BufferedImage grayscale(BufferedImage img){
+		BufferedImage grayscaleImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		
+		for (int i = 0; i < grayscaleImage.getHeight(); i++) {
+			for (int j = 0; j < grayscaleImage.getWidth(); j++) {
+				Color c = new Color(img.getRGB(j, i));
+				int red = (int) c.getRed();
+				int green = (int) c.getGreen();
+				int blue = (int) c.getBlue();
+				Color newColor = new Color(
+						(red + green + blue)/3,
+						(red + green + blue)/3,
+						(red + green + blue)/3);
+				grayscaleImage.setRGB(j, i, newColor.getRGB());
+			}
+		}
+		return grayscaleImage;
+	}
 	/*Grayscale conversion Function
 		Input (BufferedImage): Image to convert to grayscale
 		Output (BufferedImage): Grayscale Image
 	*/
-	public BufferedImage grayscale(BufferedImage img){
+	public BufferedImage grayscale2(BufferedImage img){
 		BufferedImage grayscaleImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		
 		for (int i = 0; i < grayscaleImage.getHeight(); i++) {
