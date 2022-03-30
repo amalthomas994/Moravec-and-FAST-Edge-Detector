@@ -15,7 +15,7 @@ public class DetectEdge extends Frame implements ActionListener {
 	CheckboxGroup metrics = new CheckboxGroup();
 	// Constructor
 	public DetectEdge(String name) {
-		super("Edge Detection - Amal Thomas - 1202009");
+		super("Corner Detection - Amal Thomas - Mohsen Kasiri");
 		// load image
 		try {
 			input = ImageIO.read(new File(name));
@@ -37,56 +37,56 @@ public class DetectEdge extends Frame implements ActionListener {
 		Button button = new Button("DoG_x");
 		button.addActionListener(this);
 		controls.add(button);
-		button = new Button("DoG_y");
-		button.addActionListener(this);
-		controls.add(button);
-		button = new Button("Grad Mag");
-		button.addActionListener(this);
-		controls.add(button);
-		button = new Button("Grad Dir");
-		button.addActionListener(this);
-		controls.add(button);
-		button = new Button("Non-max Suppression");
+		// button = new Button("DoG_y");
+		// button.addActionListener(this);
+		// controls.add(button);
+		// button = new Button("Grad Mag");
+		// button.addActionListener(this);
+		// controls.add(button);
+		// button = new Button("Grad Dir");
+		// button.addActionListener(this);
+		// controls.add(button);
+		button = new Button("Moravec Detector");
 		button.addActionListener(this);
 		controls.add(button);
 
 		final BufferedImage blurredImage = approximationFilter(source.image);
 		BufferedImage blurredImages = grayscale(blurredImage);
 
-		JLabel label1 = new JLabel("lowT=" + lowT);
-		label1.setPreferredSize(new Dimension(60, 20));
+		JLabel label1 = new JLabel("Threshold =" + lowT);
+		label1.setPreferredSize(new Dimension(120, 20));
 		controls.add(label1);
-		JSlider slider1 = new JSlider(1, 128, lowT);
+		JSlider slider1 = new JSlider(1, 7000, lowT);
 		slider1.setPreferredSize(new Dimension(75, 20));
 		controls.add(slider1);
 		slider1.addChangeListener(changeEvent -> {
 			lowT = slider1.getValue();
-			label1.setText("lowT=" + lowT);
-			target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
+			label1.setText("Threshold=" + lowT);
+			// target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
 
 		});
-		JLabel label2 = new JLabel("highT=" + highT);
-		label2.setPreferredSize(new Dimension(60, 20));
-		controls.add(label2);
-		JSlider slider2 = new JSlider(1, 128, highT);
-		slider2.setPreferredSize(new Dimension(75, 20));
-		controls.add(slider2);
-		slider2.addChangeListener(changeEvent -> {
-			highT = slider2.getValue();
-			label2.setText("highT=" + highT);
-			target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
+		// JLabel label2 = new JLabel("highT=" + highT);
+		// label2.setPreferredSize(new Dimension(60, 20));
+		// controls.add(label2);
+		// JSlider slider2 = new JSlider(1, 128, highT);
+		// slider2.setPreferredSize(new Dimension(75, 20));
+		// controls.add(slider2);
+		// slider2.addChangeListener(changeEvent -> {
+		// 	// highT = slider2.getValue();
+		// 	label2.setText("highT=" + highT);
+		// 	target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
 
-		});
+		// });
 
-		button = new Button("Thresholding");
-		button.addActionListener(this);
-		controls.add(button);
-		button = new Button("Thresh Color");
-		button.addActionListener(this);
-		controls.add(button);
-		button = new Button("Hysteresis Tracking");
-		button.addActionListener(this);
-		controls.add(button);
+		// button = new Button("Thresholding");
+		// button.addActionListener(this);
+		// controls.add(button);
+		// button = new Button("Thresh Color");
+		// button.addActionListener(this);
+		// controls.add(button);
+		// button = new Button("Hysteresis Tracking");
+		// button.addActionListener(this);
+		// controls.add(button);
 		// add two panels
 		add("Center", main);
 		add("South", controls);
@@ -114,17 +114,184 @@ public class DetectEdge extends Frame implements ActionListener {
 			target.resetImage(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)));
 		} else if ( ((Button)e.getSource()).getLabel().equals("Grad Dir") ) {
 			target.resetImage(colorWheel(grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
-		} else if ( ((Button)e.getSource()).getLabel().equals("Non-max Suppression") ) {
-			target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
-		} else if ( ((Button)e.getSource()).getLabel().equals("Thresholding") ) {
-			useColorThreshold = false;
-			target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))), highT, lowT, useColorThreshold));
-		} else if ( ((Button)e.getSource()).getLabel().equals("Thresh Color") ) {
-			useColorThreshold = true;
-			target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))), highT, lowT, useColorThreshold));
-		} else if ( ((Button)e.getSource()).getLabel().equals("Hysteresis Tracking") ) {
-			target.resetImage(hysteresis_tracking(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))), highT, lowT, false)));
+		} else if ( ((Button)e.getSource()).getLabel().equals("Moravec Detector") ) {
+			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
+			target.resetImage(moravec(source.image));
+		} 
+	}
+
+	public Color[] patch_maker (int p, int q, BufferedImage img) {
+		Color[] patch = new Color[9];
+		try{
+			patch[0] = new Color(img.getRGB(p-1, q-1));
+			patch[1] = new Color(img.getRGB(p, q-1));
+			patch[2] = new Color(img.getRGB(p+1, q-1));
+			patch[3] = new Color(img.getRGB(p-1, q)); 
+			patch[4] = new Color(img.getRGB(p, q));
+			patch[5] = new Color(img.getRGB(p+1, q));
+			patch[6] = new Color(img.getRGB(p-1, q+1));
+			patch[7] = new Color(img.getRGB(p, q+1));
+			patch[8] = new Color(img.getRGB(p+1, q+1));
+			return patch;
 		}
+		catch(Exception e){
+			patch[0] = new Color(0,0,0);
+			patch[1] = new Color(0,0,0);
+			patch[2] = new Color(0,0,0);
+			patch[3] = new Color(0,0,0);
+			patch[4] = new Color(0,0,0);
+			patch[5] = new Color(0,0,0);
+			patch[6] = new Color(0,0,0);
+			patch[7] = new Color(0,0,0);
+			patch[8] = new Color(0,0,0);
+
+			
+			return patch;
+
+		}
+			
+	}
+
+	public BufferedImage moravec(BufferedImage img) {
+		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage result_final = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+		double[][] output_array = new double[width][height];
+
+		
+		for ( int q=1 ; q<height-1 ; q++ ) {
+			for ( int p=1 ; p<width-1 ; p++ ) {
+				
+				// left = p==0 ? p : p-1;
+				// middle = p;
+				// right = p==width-1 ? p : p+1;
+				// up = q==0 ? q : q-1;
+				// down = q==height-1 ? q : q+1;
+				
+				Color[] current_Patch = patch_maker(p, q, img);
+				Color[] left_Patch = patch_maker(p-1, q, img);
+				Color[] right_Patch = patch_maker(p+1, q, img);
+				Color[] up_Patch = patch_maker(p, q-1, img);
+				Color[] down_Patch = patch_maker(p, q+1, img);
+				Color[] left_up_Patch = patch_maker(p-1, q-1, img);
+				Color[] left_down_Patch = patch_maker(p-1, q+1, img);
+				Color[] right_up_Patch = patch_maker(p+1, q-1, img);
+				Color[] right_down_Patch = patch_maker(p+1, q+1, img);
+				
+				double[] ssd_left = SSD(current_Patch, left_Patch);
+				double[] ssd_right = SSD(current_Patch, right_Patch);
+				double[] ssd_center = SSD(current_Patch, current_Patch);
+				double[] ssd_up = SSD(current_Patch, up_Patch);
+				double[] ssd_down = SSD(current_Patch, down_Patch);
+				double[] ssd_left_up = SSD(current_Patch, left_up_Patch);
+				double[] ssd_left_down = SSD(current_Patch, left_down_Patch);
+				double[] ssd_right_up = SSD(current_Patch, right_up_Patch);
+				double[] ssd_right_down = SSD(current_Patch, right_down_Patch);
+				double threshold = lowT;
+
+				double[][] patch = new double[8][3];
+				patch[0] = ssd_left;
+				patch[1] = ssd_right;
+				patch[2] = ssd_up;
+				patch[3] = ssd_down;
+				patch[4] = ssd_left_up;
+				patch[5] = ssd_left_down;
+				patch[6] = ssd_right_up;
+				patch[7] = ssd_right_down;
+
+				double[] max_patch = new double[3];
+				max_patch = max_ssd(patch);
+				double[] min_patch = new double[3];
+				min_patch = min_ssd(patch);
+
+				if (min_patch[0] > threshold && min_patch[1] > threshold && min_patch[2] > threshold){
+						result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+					}
+				// if (ssd_left[0] > threshold &&
+				// 	ssd_right[0] > threshold &&
+				// 	ssd_up[0] > threshold &&
+				// 	ssd_down[0] > threshold &&
+				// 	ssd_left_up[0] > threshold &&
+				// 	ssd_left_down[0] > threshold &&
+				// 	ssd_right_up[0] > threshold &&
+				// 	ssd_right_down[0] > threshold &&
+				// 	ssd_left[1] > threshold &&
+				// 	ssd_right[1] > threshold &&
+				// 	ssd_up[1] > threshold &&
+				// 	ssd_down[1] > threshold &&
+				// 	ssd_left_up[1] > threshold &&
+				// 	ssd_left_down[1] > threshold &&
+				// 	ssd_right_up[1] > threshold &&
+				// 	ssd_right_down[1] > threshold &&
+				// 	ssd_left[2] > threshold &&
+				// 	ssd_right[2] > threshold &&
+				// 	ssd_up[2] > threshold &&
+				// 	ssd_down[2] > threshold &&
+				// 	ssd_left_up[2] > threshold &&
+				// 	ssd_left_down[2] > threshold &&
+				// 	ssd_right_up[2] > threshold &&
+				// 	ssd_right_down[2] > threshold){
+				// 		result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+				// 	}
+				
+			}
+			Color black = new Color(0,0,0);
+		for ( int k=1 ; k<height-1 ; k++ ) {
+			for ( int l=1 ; l<width-1 ; l++ ) {
+
+				if (result.getRGB(l, k) == black.getRGB()){
+					result_final.setRGB(l, k, img.getRGB(l, k));
+				}else{
+					result_final.setRGB(l, k, result.getRGB(l,k));
+
+				}
+			}
+		}
+		}
+		return result_final;
+	}
+
+	public double[] max_ssd(double[][] ssds){
+		double max = 0;
+		int max_i = -1;
+		for (int i = 0; i < ssds.length; i++){
+			if ((ssds[i][0] + ssds[i][1] + ssds[i][2]) >= max){
+				max = ssds[i][0] + ssds[i][1] + ssds[i][2];
+				max_i = i;
+			}
+		}
+		// System.out.println("Max: " + max);
+		return ssds[max_i];
+	}
+	public double[] min_ssd(double[][] ssds){
+		double min = 100000000;
+		int min_i = -1;
+		for (int i = 0; i < ssds.length; i++){
+			if ((ssds[i][0] + ssds[i][1] + ssds[i][2]) <= min){
+				min = ssds[i][0] + ssds[i][1] + ssds[i][2];
+				min_i = i;
+			}
+		}
+		// System.out.println("Min: " + min);
+
+		return ssds[min_i];
+	}
+	public double[] SSD(Color[] patch, Color[] template){
+		double ssd_r = 0;
+		double ssd_g = 0;
+		double ssd_b = 0;
+		for (int i = 0; i < patch.length; i++){
+			ssd_r = ssd_r + Math.pow((template[i].getRed() - patch[i].getRed()), 2);
+			ssd_g = ssd_g + Math.pow((template[i].getGreen() - patch[i].getGreen()), 2);
+			ssd_b = ssd_b + Math.pow((template[i].getBlue() - patch[i].getBlue()), 2);
+		}
+		double[] ssds = new double[3];
+		ssds[0] = ssd_r;
+		ssds[1] = ssd_g;
+		ssds[2] = ssd_b;
+
+		// return new Color((int) ssd_r, (int) ssd_g, (int) ssd_b);
+		return ssds;
 	}
 
 	/*Function to get the intensity of the image in the x direction
@@ -648,6 +815,6 @@ public class DetectEdge extends Frame implements ActionListener {
 		return colorWheelImage;
 	}
 	public static void main(String[] args) {
-		new DetectEdge(args.length==1 ? args[0] : "Johnston_Hall.png");
+		new DetectEdge(args.length==1 ? args[0] : "Cabot_Tower.png");
 	}
 }
