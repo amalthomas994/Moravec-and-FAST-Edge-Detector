@@ -117,8 +117,50 @@ public class DetectEdge extends Frame implements ActionListener {
 		} else if ( ((Button)e.getSource()).getLabel().equals("Moravec Detector") ) {
 			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
 			target.resetImage(moravec(source.image));
-		} 
+		} else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
+			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
+			target.resetImage(moravec(source.image));
+		}  
 	}
+
+	public int[] bresenham_circle (int p, int q, BufferedImage img){
+		int[] circle = new int[16];
+		circle[0] = img.getRaster().getSample(p+3, q, 0);
+		circle[1] = img.getRaster().getSample(p+3, q-1, 0);
+		circle[2] = img.getRaster().getSample(p+2, q-2, 0);
+		circle[3] = img.getRaster().getSample(p+1, q-3, 0);
+		circle[4] = img.getRaster().getSample(p, q-3, 0);
+		circle[5] = img.getRaster().getSample(p-1, q-3, 0);
+		circle[6] = img.getRaster().getSample(p-2, q-2, 0);
+		circle[7] = img.getRaster().getSample(p-3, q-1, 0);
+		circle[8] = img.getRaster().getSample(p-3, q, 0);
+		circle[9] = img.getRaster().getSample(p-3, q+1, 0);
+		circle[10] = img.getRaster().getSample(p-2, q+2, 0);
+		circle[11] = img.getRaster().getSample(p-1, q+3, 0);
+		circle[12] = img.getRaster().getSample(p, q+3, 0);
+		circle[13] = img.getRaster().getSample(p+1, q+3, 0);
+		circle[14] = img.getRaster().getSample(p+2, q+2, 0);
+		circle[15] = img.getRaster().getSample(p+3, q+1, 0);
+
+
+
+		return circle;
+	}
+
+	public BufferedImage FAST(BufferedImage img) {
+		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		int n = 12;
+		for ( int q=1 ; q<height-1 ; q++ ) {
+			for ( int p=1 ; p<width-1 ; p++ ) { 
+				int[] circle = bresenham_circle(p, q, img);
+				for (int i = 0; i < circle.length; i+=4){
+					
+				}
+			}
+		}
+		return result;
+	}
+
 
 	public Color[] patch_maker (int p, int q, BufferedImage img) {
 		Color[] patch = new Color[9];
