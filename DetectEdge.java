@@ -53,8 +53,8 @@ public class DetectEdge extends Frame implements ActionListener {
 		button.addActionListener(this);
 		controls.add(button);
 
-		final BufferedImage blurredImage = approximationFilter(source.image);
-		BufferedImage blurredImages = grayscale(blurredImage);
+		// final BufferedImage blurredImage = approximationFilter(source.image);
+		// BufferedImage blurredImages = grayscale(blurredImage);
 
 		JLabel label1 = new JLabel("Threshold =" + lowT);
 		label1.setPreferredSize(new Dimension(120, 20));
@@ -150,6 +150,8 @@ public class DetectEdge extends Frame implements ActionListener {
 
 	public BufferedImage FAST(BufferedImage img) {
 		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		// BufferedImage result = img;
+
 		img = grayscale(img);
 		int n = 12;
 		for ( int q=4 ; q<height-4 ; q++ ) {
@@ -164,27 +166,43 @@ public class DetectEdge extends Frame implements ActionListener {
 							// System.out.println("Initial Counter: " + initial_counter);
 					}
 				}
+				int i = 0;
+				// System.out.println("Current Pixel: " + p + " " + q);
+				// if (p > 244){
+				// 	System.exit(0);
+				// }
 				if (initial_counter >= 3){
 					int second_counter = 0; 
 					for (int start = 0; start < circle.length; start++){
-						for (int i = start; i < circle.length + start; i++){
-							if ( circle.length+start>16) {
-								i = circle.length+start-16;
+						// System.out.print("Start: " + start + ": ");
+						for (int j = start; j < circle.length + start; j++){
+							if (j > 15){
+								i = j - 16;
+							}else{
+								i = j;
 							}
-							System.out.println(i);
+							// if ( circle.length+start>15) {
+							// 	i = i+circle.length+start-16;
+							// }
+							// System.out.print(" " + i + " ");
 							if ((current_pixel_intensity + fast_threshold) < circle[i] ||
 								(current_pixel_intensity - fast_threshold) > circle[i]) {
 								second_counter++;
 								// System.out.println("Second Counter: " + second_counter);
 
 								if (second_counter == n){
-									result.setRGB(p, q, new Color(255, 255, 255).getRGB());
+									result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+									// System.out.print("Found Corner");
+									break;
 								}
 									
 							} else{
 								second_counter = 0;
 							}
+
 						}
+						second_counter = 0;
+						// System.out.println(" ");
 					}
 
 				}
@@ -193,7 +211,7 @@ public class DetectEdge extends Frame implements ActionListener {
 		return result;
 	}
 
-		public int SAD(int p, int q, BufferedImage img){
+	public int SAD(int p, int q, BufferedImage img){
 		int sad = 0;
 
 		for (int i = 0; i < 16; i++){ //If we want to change the r, we have to change 16 as well
