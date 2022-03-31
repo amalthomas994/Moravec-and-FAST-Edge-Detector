@@ -4,6 +4,8 @@ import java.awt.image.*;
 import java.io.*;
 import javax.imageio.*;
 import javax.swing.*;
+
+import java.util.Arrays;
 import java.util.stream.IntStream;
 // Main class
 public class DetectEdge extends Frame implements ActionListener {
@@ -50,6 +52,9 @@ public class DetectEdge extends Frame implements ActionListener {
 		button.addActionListener(this);
 		controls.add(button);
 		button = new Button("FAST Detector");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("Compare");
 		button.addActionListener(this);
 		controls.add(button);
 
@@ -119,11 +124,21 @@ public class DetectEdge extends Frame implements ActionListener {
 			target.resetImage(colorWheel(grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
 		} else if ( ((Button)e.getSource()).getLabel().equals("Moravec Detector") ) {
 			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
+			source.resetImage(input);
 			target.resetImage(moravec(source.image));
-		} else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
+		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
 			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
+			// source.resetImage(input);
+			// BufferedImage src_img = source.image;
+			// source.resetImage((src_img));
 			target.resetImage(FAST(source.image));
-		}  
+		} else if ( ((Button)e.getSource()).getLabel().equals("Compare") ) {
+			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
+			source.resetImage(input);
+			BufferedImage src_img = source.image;
+			source.resetImage(moravec(src_img));
+			target.resetImage(FAST(src_img));
+		} 
 	}
 
 	public int[] bresenham_circle (int p, int q, BufferedImage img){
@@ -148,10 +163,29 @@ public class DetectEdge extends Frame implements ActionListener {
 		return circle;
 	}
 
+	// 	public int[] surroundingPixels (int p, int q, BufferedImage img){
+	// 	int[] surrounding = new int[8];
+	// 	circle[0] = img.getRaster().getSample(p-1, q, 0);
+	// 	circle[1] = img.getRaster().getSample(p-1, q-1, 0);
+	// 	circle[2] = img.getRaster().getSample(p, q-1, 0);
+	// 	circle[3] = img.getRaster().getSample(p+1, q-1, 0);
+	// 	circle[4] = img.getRaster().getSample(p+1, q, 0);
+	// 	circle[5] = img.getRaster().getSample(p+1, q+1, 0);
+	// 	circle[6] = img.getRaster().getSample(p, q+1, 0);
+	// 	circle[7] = img.getRaster().getSample(p-1, q+1, 0);
+
+	// 	return surrounding;
+	// }
+
 	public BufferedImage FAST(BufferedImage img) {
 		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		// BufferedImage result = img;
+		BufferedImage result_final = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
+		int[][] corners = new int[width][height];
+		for (int[] row: corners)
+    		Arrays.fill(row, 0);
+		// BufferedImage result = img;
+		BufferedImage original_image = img;
 		img = grayscale(img);
 		int n = 12;
 		for ( int q=4 ; q<height-4 ; q++ ) {
@@ -189,11 +223,71 @@ public class DetectEdge extends Frame implements ActionListener {
 								(current_pixel_intensity - fast_threshold) > circle[i]) {
 								second_counter++;
 								// System.out.println("Second Counter: " + second_counter);
-
+								
+								boolean greatest = true;
 								if (second_counter == n){
-									result.setRGB(p, q, new Color(255, 0, 0).getRGB());
-									// System.out.print("Found Corner");
-									break;
+									if (corners[p-1][q] == 1){
+										if (SAD(p-1,q,img)<SAD(p,q,img)){
+											// corners[p][q] = 1;
+											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+											// // System.out.print("Found Corner");
+
+											corners[p-1][q] = 0;
+											result.setRGB(p-1, q, new Color(0, 0, 0).getRGB());
+											// break;
+										}
+										else {
+											greatest = false;
+										}
+									}
+									if (corners[p-1][q-1] == 1){
+										if (SAD(p-1,q-1,img)<SAD(p,q,img)){
+											// corners[p][q] = 1;
+											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+											// // System.out.print("Found Corner");
+
+											corners[p-1][q-1] = 0;
+											result.setRGB(p-1, q-1, new Color(0, 0, 0).getRGB());
+											// break;
+										}
+										else {
+											greatest = false;
+										}
+									}
+									if (corners[p][q-1] == 1){
+										if (SAD(p,q-1,img)<SAD(p,q,img)){
+											// corners[p][q] = 1;
+											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+											// System.out.print("Found Corner");
+
+											corners[p][q-1] = 0;
+											result.setRGB(p, q-1, new Color(0, 0, 0).getRGB());
+											// break;
+										}
+										else {
+											greatest = false;
+										}
+									}
+									if (corners[p+1][q-1] == 1){
+										if (SAD(p+1,q-1,img)<SAD(p,q,img)){
+											// corners[p][q] = 1;
+											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+											// System.out.print("Found Corner");
+
+											corners[p+1][q-1] = 0;
+											result.setRGB(p+1, q-1, new Color(0, 0, 0).getRGB());
+											// break;
+										}
+										else {
+											greatest = false;
+										}
+									}
+									if (greatest){
+										// System.out.print("Found Greatest: P: " + p + " Q: " + q);
+										corners[p][q] = 1;
+										result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+										break;
+									}
 								}
 									
 							} else{
@@ -208,7 +302,19 @@ public class DetectEdge extends Frame implements ActionListener {
 				}
 			}
 		}
-		return result;
+		Color black = new Color(0,0,0);
+		for ( int k=0 ; k<height ; k++ ) {
+			for ( int l=0 ; l<width ; l++ ) {
+
+				if (result.getRGB(l, k) == black.getRGB()){
+					result_final.setRGB(l, k, original_image.getRGB(l, k));
+				}else{
+					result_final.setRGB(l, k, result.getRGB(l,k));
+
+				}
+			}
+		}
+		return result_final;
 	}
 
 	public int SAD(int p, int q, BufferedImage img){
@@ -336,7 +442,7 @@ public class DetectEdge extends Frame implements ActionListener {
 				// 	}
 				
 			}
-			Color black = new Color(0,0,0);
+		Color black = new Color(0,0,0);
 		for ( int k=1 ; k<height-1 ; k++ ) {
 			for ( int l=1 ; l<width-1 ; l++ ) {
 
