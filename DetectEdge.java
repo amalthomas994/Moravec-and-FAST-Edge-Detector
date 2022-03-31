@@ -128,7 +128,7 @@ public class DetectEdge extends Frame implements ActionListener {
 			target.resetImage(moravec(source.image));
 		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
 			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
-			// source.resetImage(input);
+			source.resetImage(input);
 			// BufferedImage src_img = source.image;
 			// source.resetImage((src_img));
 			target.resetImage(FAST(source.image));
@@ -161,6 +161,29 @@ public class DetectEdge extends Frame implements ActionListener {
 		circle[15] = img.getRaster().getSample(p+3, q+1, 0);
 
 		return circle;
+	}
+	public BufferedImage bresenham_circle_draw(int p, int q, BufferedImage img){
+		int[] circle = new int[16];
+		Color color = new Color(0, 255, 0);
+		int c = color.getRGB();
+		img.setRGB(p+3, q, c);
+		img.setRGB(p+3, q-1, c);
+		img.setRGB(p+2, q-2, c);
+		img.setRGB(p+1, q-3, c);
+		img.setRGB(p, q-3, c);
+		img.setRGB(p-1, q-3, c);
+		img.setRGB(p-2, q-2, c);
+		img.setRGB(p-3, q-1, c);
+		img.setRGB(p-3, q, c);
+		img.setRGB(p-3, q+1, c);
+		img.setRGB(p-2, q+2, c);
+		img.setRGB(p-1, q+3, c);
+		img.setRGB(p, q+3, c);
+		img.setRGB(p+1, q+3, c);
+		img.setRGB(p+2, q+2, c);
+		img.setRGB(p+3, q+1, c);
+
+		return img;
 	}
 
 	// 	public int[] surroundingPixels (int p, int q, BufferedImage img){
@@ -303,12 +326,35 @@ public class DetectEdge extends Frame implements ActionListener {
 			}
 		}
 		Color black = new Color(0,0,0);
+		Color green = new Color(0,255,0);
+
 		for ( int k=0 ; k<height ; k++ ) {
 			for ( int l=0 ; l<width ; l++ ) {
 
-				if (result.getRGB(l, k) == black.getRGB()){
+				if (result.getRGB(l, k) == black.getRGB() || result.getRGB(l, k) == green.getRGB()){
 					result_final.setRGB(l, k, original_image.getRGB(l, k));
 				}else{
+					Color color = new Color(0, 255, 0);
+					int c = color.getRGB();
+					int p = l;
+					int q = k;
+					result_final.setRGB(p+3, q, c);
+					result_final.setRGB(p+3, q-1, c);
+					result_final.setRGB(p+2, q-2, c);
+					result_final.setRGB(p+1, q-3, c);
+					result_final.setRGB(p, q-3, c);
+					result_final.setRGB(p-1, q-3, c);
+					result_final.setRGB(p-2, q-2, c);
+					result_final.setRGB(p-3, q-1, c);
+					result_final.setRGB(p-3, q, c);
+					result_final.setRGB(p-3, q+1, c);
+					result_final.setRGB(p-2, q+2, c);
+					result_final.setRGB(p-1, q+3, c);
+					result_final.setRGB(p, q+3, c);
+					result_final.setRGB(p+1, q+3, c);
+					result_final.setRGB(p+2, q+2, c);
+					result_final.setRGB(p+3, q+1, c);
+					// result_final = bresenham_circle_draw(l, k, result_final);
 					result_final.setRGB(l, k, result.getRGB(l,k));
 
 				}
