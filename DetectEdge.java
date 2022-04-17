@@ -11,9 +11,13 @@ import java.util.stream.IntStream;
 public class DetectEdge extends Frame implements ActionListener {
 	BufferedImage input;
 	int width, height;
-	int lowT=20, highT=100, fast_threshold=10;;
+	int lowT=10, highT=70, fast_threshold=10, k_value=3;
 	boolean useColorThreshold = false;
 	CanvasImage source, target;
+	double x[][][], y[][][];		// Matrix for DoG_x and DoG_y
+	double mag[][][], dir[][][];	// Matrix for magnitude and direction
+	double nms[][];				// Matrix for non-max suppression result
+	double thres[][];	
 	CheckboxGroup metrics = new CheckboxGroup();
 	// Constructor
 	public DetectEdge(String name) {
@@ -35,20 +39,9 @@ public class DetectEdge extends Frame implements ActionListener {
 		main.add(source);
 		main.add(target);
 		// prepare the panel for buttons.
-		Panel controls = new Panel();
-		Button button = new Button("DoG_x");
-		button.addActionListener(this);
-		controls.add(button);
-		// button = new Button("DoG_y");
-		// button.addActionListener(this);
-		// controls.add(button);
-		// button = new Button("Grad Mag");
-		// button.addActionListener(this);
-		// controls.add(button);
-		// button = new Button("Grad Dir");
-		// button.addActionListener(this);
-		// controls.add(button);
-		button = new Button("Moravec Detector");
+		Panel controls = new Panel(new GridLayout(4,4, 10, 11));
+		// controls.setBackground(Color.lightGray);
+		Button button = new Button("Moravec Detector");
 		button.addActionListener(this);
 		controls.add(button);
 		button = new Button("FAST Detector");
@@ -57,24 +50,44 @@ public class DetectEdge extends Frame implements ActionListener {
 		button = new Button("Compare");
 		button.addActionListener(this);
 		controls.add(button);
-
+		button = new Button("FAST Detector w/ Blur");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("K-Means");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("K-Means w/ Blur");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("Edge Detection");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("Edge Detection w/ Blur");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("FAST Canny");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("FAST Canny w/ Blur");
+		button.addActionListener(this);
+		controls.add(button);
 		// final BufferedImage blurredImage = approximationFilter(source.image);
 		// BufferedImage blurredImages = grayscale(blurredImage);
 
-		JLabel label1 = new JLabel("Threshold =" + lowT);
-		label1.setPreferredSize(new Dimension(120, 20));
+		JLabel label1 = new JLabel("Moravec Threshold =" + lowT);
+		// label1.setPreferredSize(new Dimension(120, 20));
+		// label1.setBackground(bg);
 		controls.add(label1);
 		JSlider slider1 = new JSlider(1, 7000, lowT);
 		slider1.setPreferredSize(new Dimension(75, 20));
 		controls.add(slider1);
 		slider1.addChangeListener(changeEvent -> {
 			lowT = slider1.getValue();
-			label1.setText("Threshold=" + lowT);
-			// target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
+			label1.setText("Moravec Threshold=" + lowT);
 
 		});
 		JLabel label2 = new JLabel("FAST Thresh=" + fast_threshold);
-		label2.setPreferredSize(new Dimension(150, 20));
+		// label2.setPreferredSize(new Dimension(150, 20));
 		controls.add(label2);
 		JSlider slider2 = new JSlider(0, 255, fast_threshold);
 		slider2.setPreferredSize(new Dimension(75, 20));
@@ -82,20 +95,20 @@ public class DetectEdge extends Frame implements ActionListener {
 		slider2.addChangeListener(changeEvent -> {
 			fast_threshold = slider2.getValue();
 			label2.setText("FAST Thresh=" + fast_threshold);
-			// target.resetImage(thresholdingFunction(non_max_suppression(grad_mag(derivatives_x(blurredImages), derivatives_y(blurredImages)), grad_dir(derivatives_x(blurredImages), derivatives_y(blurredImages))), highT, lowT, useColorThreshold));
 
 		});
 
-		// button = new Button("Thresholding");
-		// button.addActionListener(this);
-		// controls.add(button);
-		// button = new Button("Thresh Color");
-		// button.addActionListener(this);
-		// controls.add(button);
-		// button = new Button("Hysteresis Tracking");
-		// button.addActionListener(this);
-		// controls.add(button);
-		// add two panels
+		JLabel label3 = new JLabel("k=" + k_value);
+		// label3.setPreferredSize(new Dimension(150, 20));
+		controls.add(label3);
+		JSlider slider3 = new JSlider(0, 16, k_value);
+		slider3.setPreferredSize(new Dimension(75, 20));
+		controls.add(slider3);
+		slider3.addChangeListener(changeEvent -> {
+			k_value = slider3.getValue();
+			label3.setText("k=" + k_value);
+
+		});
 		add("Center", main);
 		add("South", controls);
 		addWindowListener(new ExitListener());
@@ -123,17 +136,39 @@ public class DetectEdge extends Frame implements ActionListener {
 		} else if ( ((Button)e.getSource()).getLabel().equals("Grad Dir") ) {
 			target.resetImage(colorWheel(grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
 		} else if ( ((Button)e.getSource()).getLabel().equals("Moravec Detector") ) {
-			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
 			source.resetImage(input);
 			target.resetImage(moravec(source.image));
 		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
-			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
 			source.resetImage(input);
-			// BufferedImage src_img = source.image;
-			// source.resetImage((src_img));
-			target.resetImage(FAST(source.image));
+			target.resetImage(FAST((source.image)));
+		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector w/ Blur") ) {
+			source.resetImage(input);
+			target.resetImage(FAST(approximationFilter(source.image)));
+		}  else if ( ((Button)e.getSource()).getLabel().equals("K-Means") ) {
+			source.resetImage(input);
+			target.resetImage(FAST(k_means((source.image), k_value)));
+
+		}  else if ( ((Button)e.getSource()).getLabel().equals("K-Means w/ Blur") ) {
+			source.resetImage(input);
+			target.resetImage(FAST((k_means(approximationFilter(source.image), k_value))));
+
+		}  else if ( ((Button)e.getSource()).getLabel().equals("Edge Detection") ) {
+			source.resetImage(input);
+			target.resetImage(FAST(grad_mag(derivatives_x(source.image), derivatives_y(source.image))));
+
+		}  else if ( ((Button)e.getSource()).getLabel().equals("Edge Detection w/ Blur") ) {
+			source.resetImage(input);
+			target.resetImage(FAST(approximationFilter(grad_mag(derivatives_x(source.image), derivatives_y(source.image)))));
+
+		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Canny") ) {
+			source.resetImage(input);
+			target.resetImage(FAST(hysterisis_tracking()));
+
+		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Canny w/ Blur") ) {
+			source.resetImage(input);
+			target.resetImage(FAST(approximationFilter(hysterisis_tracking())));
+
 		} else if ( ((Button)e.getSource()).getLabel().equals("Compare") ) {
-			// target.resetImage(non_max_suppression(grad_mag(derivatives_x(blurredImage), derivatives_y(blurredImage)), grad_dir(derivatives_x(blurredImage), derivatives_y(blurredImage))));
 			source.resetImage(input);
 			BufferedImage src_img = source.image;
 			source.resetImage(moravec(src_img));
@@ -141,6 +176,107 @@ public class DetectEdge extends Frame implements ActionListener {
 		} 
 	}
 
+	
+	/*Function to apply K-Means image segmentation
+		Input (BufferedImage, int): Original RGB image, number of K cluster_centers desired
+		Output (BufferedImage): Image segmented with K randomly generated colors
+		K-Means Function:
+			- Randomly assign K colors to K cluster centers
+			- Calculate distance from each pixel color in original image to cluster centers
+			- Pick closest cluster to pixel color
+			- Assign pixel to closest cluster
+			- Once all pixels are assigned to it's respective cluster, computer the new cluster center
+				- Average all colors in the cluster by adding all colors in the cluster and dividing by total number of pixels in the cluster
+			- Repeat algorithm with new cluster centers
+			- Stop algorithm until there is no further change in assignment of pixel points to cluster_centers.
+	*/
+    public BufferedImage k_means(BufferedImage img, int k){
+        BufferedImage final_image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Color[] cluster_colors = new Color[k];   
+        double[][] cluster_centers = new double[k][3];
+        int[] pixels_in_cluster = new int[k]; 
+        
+        
+        //Creating K clusters with random colors
+        for (int i = 0; i < k; i++){
+            Color clr = new Color((int) (Math.random()*255d), (int) (Math.random()*255d), (int) (Math.random()*255d));
+            pixels_in_cluster[i] = 0;
+            cluster_colors[i] = clr;
+        }
+        
+        //Calculating pixel distance from cluster center
+        for (int total_iterations = 0; total_iterations < 100; total_iterations++){
+            for ( int q=0 ; q<height ; q++ ){
+                for ( int p=0 ; p<width ; p++ ){
+                    double closest_distance = 100000d;
+                    int closest_k = 0;
+                    Color closest_color = new Color(0,0,0);
+                    //For each pixel, find the cluster color closest to pixel color in image using city block distance
+                    for (int i = 0; i < k; i++){
+                        Color img_color = new Color(img.getRGB(p,q));
+                        int img_color_r = img_color.getRed();
+                        int img_color_g = img_color.getGreen();
+                        int img_color_b = img_color.getBlue();
+                        int cls_r = cluster_colors[i].getRed();
+                        int cls_g = cluster_colors[i].getBlue();
+                        int cls_b = cluster_colors[i].getGreen();
+
+                        //City Block distance
+                        int distance = Math.abs(img_color_r - cls_r) + Math.abs(img_color_g - cls_g) + Math.abs(img_color_b - cls_b);
+						
+                        if (distance < closest_distance){
+                            closest_distance = distance;
+                            closest_k = i;
+                            closest_color = cluster_colors[closest_k];
+                        }
+                    }
+                    final_image.setRGB(p, q, closest_color.getRGB());
+                }
+            }
+
+            //Finding pixels belonging to each cluster
+            for ( int q=0 ; q<height ; q++ ) {
+                for ( int p=0 ; p<width ; p++ ) {
+                    Color output_image_color = new Color(final_image.getRGB(p,q));
+                    int output_image_color_r = output_image_color.getRed();
+                    int output_image_color_g = output_image_color.getGreen();
+                    int output_image_color_b = output_image_color.getBlue();
+                    Color img_color = new Color(img.getRGB(p,q));
+                    int img_color_r = img_color.getRed();
+                    int img_color_g = img_color.getGreen();
+                    int img_color_b = img_color.getBlue();
+
+                    //Check which cluster pixel belongs to
+                    for (int i = 0; i < k; i++){
+                        //If pixel belongs to a cluster, add pixel color to cluster color
+                        if (cluster_colors[i].getRed() == output_image_color_r && cluster_colors[i].getGreen() == output_image_color_g && cluster_colors[i].getBlue() == output_image_color_b){
+                            cluster_centers[i][0] = cluster_centers[i][0] + img_color_r;
+                            cluster_centers[i][1] = cluster_centers[i][1] + img_color_g;
+                            cluster_centers[i][2] = cluster_centers[i][2] + img_color_b;
+                            pixels_in_cluster[i] = pixels_in_cluster[i] + 1; 
+                        }
+                    }
+                }
+            }
+            //Finding new cluster colors
+            for (int i = 0; i < k; i++){
+                if (pixels_in_cluster[i] != 0){
+                    double red = cluster_centers[i][0] / pixels_in_cluster[i];
+                    double green = cluster_centers[i][1] / pixels_in_cluster[i];
+                    double blue = cluster_centers[i][2] / pixels_in_cluster[i];
+                    cluster_colors[i] = new Color((int) red, (int) green, (int) blue);
+                }
+            }
+            //Clear out pixel counts and center colors
+            for (int i = 0; i < k; i++){
+                cluster_centers[i][0] = 0;
+                cluster_centers[i][1] = 0;
+                cluster_centers[i][2] = 0;
+                pixels_in_cluster[i] = 0;
+            }
+        }
+        return final_image;
+    }
 	public int[] bresenham_circle (int p, int q, BufferedImage img){
 		int[] circle = new int[16];
 		circle[0] = img.getRaster().getSample(p+3, q, 0);
@@ -164,7 +300,7 @@ public class DetectEdge extends Frame implements ActionListener {
 	}
 	public BufferedImage bresenham_circle_draw(int p, int q, BufferedImage img){
 		int[] circle = new int[16];
-		Color color = new Color(0, 255, 0);
+		Color color = new Color(255, 255, 0);
 		int c = color.getRGB();
 		img.setRGB(p+3, q, c);
 		img.setRGB(p+3, q-1, c);
@@ -182,34 +318,26 @@ public class DetectEdge extends Frame implements ActionListener {
 		img.setRGB(p+1, q+3, c);
 		img.setRGB(p+2, q+2, c);
 		img.setRGB(p+3, q+1, c);
-
 		return img;
 	}
-
-	// 	public int[] surroundingPixels (int p, int q, BufferedImage img){
-	// 	int[] surrounding = new int[8];
-	// 	circle[0] = img.getRaster().getSample(p-1, q, 0);
-	// 	circle[1] = img.getRaster().getSample(p-1, q-1, 0);
-	// 	circle[2] = img.getRaster().getSample(p, q-1, 0);
-	// 	circle[3] = img.getRaster().getSample(p+1, q-1, 0);
-	// 	circle[4] = img.getRaster().getSample(p+1, q, 0);
-	// 	circle[5] = img.getRaster().getSample(p+1, q+1, 0);
-	// 	circle[6] = img.getRaster().getSample(p, q+1, 0);
-	// 	circle[7] = img.getRaster().getSample(p-1, q+1, 0);
-
-	// 	return surrounding;
-	// }
 
 	public BufferedImage FAST(BufferedImage img) {
 		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		BufferedImage result_final = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
+		//Matrix to store detected corners. If a corner is found, it's pixel location will be set to 1
 		int[][] corners = new int[width][height];
+		int total_corners = 0;
+		//Initialize the matrix to zero
 		for (int[] row: corners)
     		Arrays.fill(row, 0);
-		// BufferedImage result = img;
+
 		BufferedImage original_image = img;
+
+		//Get the grayscale version of the image
 		img = grayscale(img);
+
+		//Testing with n contiguous pixels in the Bresenham circle
 		int n = 12;
 		for ( int q=4 ; q<height-4 ; q++ ) {
 			for ( int p=4 ; p<width-4 ; p++ ) {
@@ -220,44 +348,27 @@ public class DetectEdge extends Frame implements ActionListener {
 					if ((current_pixel_intensity + fast_threshold) < circle[i] ||
 						(current_pixel_intensity - fast_threshold) > circle[i]) {
 							initial_counter++;
-							// System.out.println("Initial Counter: " + initial_counter);
 					}
 				}
 				int i = 0;
-				// System.out.println("Current Pixel: " + p + " " + q);
-				// if (p > 244){
-				// 	System.exit(0);
-				// }
 				if (initial_counter >= 3){
 					int second_counter = 0; 
 					for (int start = 0; start < circle.length; start++){
-						// System.out.print("Start: " + start + ": ");
 						for (int j = start; j < circle.length + start; j++){
 							if (j > 15){
 								i = j - 16;
 							}else{
 								i = j;
 							}
-							// if ( circle.length+start>15) {
-							// 	i = i+circle.length+start-16;
-							// }
-							// System.out.print(" " + i + " ");
 							if ((current_pixel_intensity + fast_threshold) < circle[i] ||
 								(current_pixel_intensity - fast_threshold) > circle[i]) {
 								second_counter++;
-								// System.out.println("Second Counter: " + second_counter);
-								
 								boolean greatest = true;
 								if (second_counter == n){
 									if (corners[p-1][q] == 1){
 										if (SAD(p-1,q,img)<SAD(p,q,img)){
-											// corners[p][q] = 1;
-											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
-											// // System.out.print("Found Corner");
-
 											corners[p-1][q] = 0;
 											result.setRGB(p-1, q, new Color(0, 0, 0).getRGB());
-											// break;
 										}
 										else {
 											greatest = false;
@@ -265,13 +376,8 @@ public class DetectEdge extends Frame implements ActionListener {
 									}
 									if (corners[p-1][q-1] == 1){
 										if (SAD(p-1,q-1,img)<SAD(p,q,img)){
-											// corners[p][q] = 1;
-											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
-											// // System.out.print("Found Corner");
-
 											corners[p-1][q-1] = 0;
 											result.setRGB(p-1, q-1, new Color(0, 0, 0).getRGB());
-											// break;
 										}
 										else {
 											greatest = false;
@@ -279,13 +385,8 @@ public class DetectEdge extends Frame implements ActionListener {
 									}
 									if (corners[p][q-1] == 1){
 										if (SAD(p,q-1,img)<SAD(p,q,img)){
-											// corners[p][q] = 1;
-											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
-											// System.out.print("Found Corner");
-
 											corners[p][q-1] = 0;
 											result.setRGB(p, q-1, new Color(0, 0, 0).getRGB());
-											// break;
 										}
 										else {
 											greatest = false;
@@ -293,20 +394,14 @@ public class DetectEdge extends Frame implements ActionListener {
 									}
 									if (corners[p+1][q-1] == 1){
 										if (SAD(p+1,q-1,img)<SAD(p,q,img)){
-											// corners[p][q] = 1;
-											// result.setRGB(p, q, new Color(255, 0, 0).getRGB());
-											// System.out.print("Found Corner");
-
 											corners[p+1][q-1] = 0;
 											result.setRGB(p+1, q-1, new Color(0, 0, 0).getRGB());
-											// break;
 										}
 										else {
 											greatest = false;
 										}
 									}
 									if (greatest){
-										// System.out.print("Found Greatest: P: " + p + " Q: " + q);
 										corners[p][q] = 1;
 										result.setRGB(p, q, new Color(255, 0, 0).getRGB());
 										break;
@@ -319,47 +414,32 @@ public class DetectEdge extends Frame implements ActionListener {
 
 						}
 						second_counter = 0;
-						// System.out.println(" ");
 					}
 
 				}
 			}
 		}
-		Color black = new Color(0,0,0);
-		Color green = new Color(0,255,0);
-
+		
+		for ( int k=0 ; k<height ; k++ ) {
+			for ( int l=0 ; l<width ; l++ ) {
+				result_final.setRGB(l, k, original_image.getRGB(l, k));
+			}
+		}
 		for ( int k=0 ; k<height ; k++ ) {
 			for ( int l=0 ; l<width ; l++ ) {
 
-				if (result.getRGB(l, k) == black.getRGB() || result.getRGB(l, k) == green.getRGB()){
-					result_final.setRGB(l, k, original_image.getRGB(l, k));
-				}else{
-					Color color = new Color(0, 255, 0);
+				if (corners[l][k] == 1){
+					Color color = new Color(255, 255, 0);
 					int c = color.getRGB();
 					int p = l;
 					int q = k;
-					result_final.setRGB(p+3, q, c);
-					result_final.setRGB(p+3, q-1, c);
-					result_final.setRGB(p+2, q-2, c);
-					result_final.setRGB(p+1, q-3, c);
-					result_final.setRGB(p, q-3, c);
-					result_final.setRGB(p-1, q-3, c);
-					result_final.setRGB(p-2, q-2, c);
-					result_final.setRGB(p-3, q-1, c);
-					result_final.setRGB(p-3, q, c);
-					result_final.setRGB(p-3, q+1, c);
-					result_final.setRGB(p-2, q+2, c);
-					result_final.setRGB(p-1, q+3, c);
-					result_final.setRGB(p, q+3, c);
-					result_final.setRGB(p+1, q+3, c);
-					result_final.setRGB(p+2, q+2, c);
-					result_final.setRGB(p+3, q+1, c);
-					// result_final = bresenham_circle_draw(l, k, result_final);
+					total_corners++;
+					bresenham_circle_draw(l, k, result_final);
 					result_final.setRGB(l, k, result.getRGB(l,k));
-
 				}
 			}
 		}
+		System.out.println("FAST: Total Corners Detected: " + total_corners);
 		return result_final;
 	}
 
@@ -780,11 +860,11 @@ public class DetectEdge extends Frame implements ActionListener {
 	}
 	
 	/*Double Thresholding Function
-		Input (BufferedImage, int, int, boolean): Non-max suppressed image, upper threshold value, lower threshold value, boolen to used colored representation or white and gray
+		Input (BufferedImage, int, int, boolean): Non-max suppressed image, upper threshold value, lower threshold value, boolean to used colored representation or white and gray
 		Output (BufferedImage): Image with Double Thresholding applied
 		Algorithm:
 			- Threshold values are normalized by dividing the maximum threshold value
-			- Maximum intensity in the input image is found and multipled to the high threshold value
+			- Maximum intensity in the input image is found and multiplied to the high threshold value
 			- Low Threshold value will be a percentage of the high threshold
 			- If the image pixel intensity is greater than the high threshold value, assign to strong edge color
 			- If the image pixel intensity is smaller than the low threshold value, set to 0
@@ -838,9 +918,7 @@ public class DetectEdge extends Frame implements ActionListener {
 						bb = 255;
 					}
 				}
-
 				t.setRGB(p, q, new Color(rr, gg, bb).getRGB());
-
 			}
 		}
 		return t;
@@ -1083,6 +1161,301 @@ public class DetectEdge extends Frame implements ActionListener {
 			}
 		}
 		return colorWheelImage;
+	}
+
+	public BufferedImage gaussian_blur_filter(BufferedImage input_img) {
+
+		BufferedImage gau_img = new BufferedImage(input_img.getWidth(), input_img.getHeight(), BufferedImage.TYPE_INT_RGB);
+		BufferedImage img = new BufferedImage(input_img.getWidth(), input_img.getHeight(), BufferedImage.TYPE_INT_RGB);
+		BufferedImage input_padding = new BufferedImage(input_img.getWidth()+4, input_img.getHeight()+4, BufferedImage.TYPE_INT_RGB);
+
+		for (int i = 0; i < input_padding.getWidth(); i++) {
+			for (int j = 0; j < input_padding.getHeight(); j++) {
+				if (i < 2 || i > input_padding.getWidth() -3 || j < 2 || j > input_padding.getHeight() - 3) {
+					input_padding.setRGB(i, j, new Color(0,0,0).getRGB());
+				} else {
+					Color clr = new Color(input_img.getRGB(i-2, j-2));
+					input_padding.setRGB(i, j, clr.getRGB());
+				}
+			}
+		}
+
+		float[] gaussian_filter = {
+			1f/273,4f/273,7f/273,4f/273,1f/273,
+			4f/273,16f/273,26f/273,16f/273,4f/273,
+			7f/273,26f/273,41f/273,26f/273,7f/273,
+			4f/273,16f/273,26f/273,16f/273,4f/273,
+			1f/273,4f/273,7f/273,4f/273,1f/273};
+
+		try {
+            Kernel kernel = new Kernel(5, 5, gaussian_filter);
+            ConvolveOp cop = new ConvolveOp(kernel);
+            gau_img = cop.filter(input_padding, null);
+        } catch (ImagingOpException e) {
+            System.err.println("Error: " + e.getLocalizedMessage());
+        }
+
+		for(int i = 0; i < input_img.getWidth(); i ++){
+			for(int j = 0; j < input_img.getHeight(); j ++){
+				Color clr = new Color(gau_img.getRGB(i+2, j+2));
+				img.setRGB(i, j, clr.getRGB());
+			}
+		}
+		return img;
+	}
+
+	public void calc_DoG_x(){
+		
+		int l, r, dr, dg, db;
+		Color clr1, clr2;
+		BufferedImage smoothed = gaussian_blur_filter(source.image);
+		x = new double[width][height][3];
+
+		for (int q = 0; q < height; q++) {
+			for (int p = 0; p < width; p++) {
+				l = p==0 ? p : p-1;
+				r = p==width-1 ? p : p+1;
+				clr1 = new Color(smoothed.getRGB(l,q));
+				clr2 = new Color(smoothed.getRGB(r,q));
+				dr = clr2.getRed() - clr1.getRed();
+				dg = clr2.getGreen() - clr1.getGreen();
+				db = clr2.getBlue() - clr1.getBlue();
+
+				x[p][q][0] = dr;
+				x[p][q][1] = dg;
+				x[p][q][2] = db;
+			}
+		}
+
+	}
+
+	public void calc_DoG_y(){
+
+		int u, d, dr, dg, db;
+		Color clr1, clr2;
+
+		BufferedImage smoothed = gaussian_blur_filter(source.image);
+		y = new double[width][height][3];
+
+		for (int q = 0; q < height; q++) {
+			for (int p = 0; p < width; p++) {
+				u = q==0 ? q : q-1;
+				d = q==height-1 ? q : q+1;
+				clr1 = new Color(smoothed.getRGB(p,u));
+				clr2 = new Color(smoothed.getRGB(p,d));
+				dr = clr2.getRed() - clr1.getRed();
+				dg = clr2.getGreen() - clr1.getGreen();
+				db = clr2.getBlue() - clr1.getBlue();
+
+				y[p][q][0] = dr;
+				y[p][q][1] = dg;
+				y[p][q][2] = db;
+			}
+		}
+	}
+
+	public void calc_magnitude() {
+
+		if (x == null)
+			calc_DoG_x();
+		if (y == null)
+			calc_DoG_y();
+
+		// mat[0] for magnitude, mat[1] for channel index
+		mag = new double[width][height][2];
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+				double r1 = x[i][j][0];
+				double g1 = x[i][j][1];
+				double b1 = x[i][j][2];
+				double r2 = y[i][j][0];
+				double g2 = y[i][j][1];
+				double b2 = y[i][j][2];
+
+				double mr = Math.sqrt(Math.pow(r1, 2) + Math.pow(r2, 2)); 
+				double mg = Math.sqrt(Math.pow(g1, 2) + Math.pow(g2, 2)); 
+				double mb = Math.sqrt(Math.pow(b1, 2) + Math.pow(b2, 2)); 
+
+				double index, max;
+				// index = 0 if red is max, 1 if green is max, 2 if blue is max
+				if (mr >= mg) {
+					if (mr >= mb) {
+						max = mr;
+						index = 0;
+					} else {
+						max = mb;
+						index = 2;
+					}
+				} else {
+					if (mg >= mb) {
+						max = mg;
+						index = 1;
+					} else {
+						max = mb;
+						index = 2;
+					}	
+				}
+				
+				max = Math.max(0, Math.min(max, 255));	// Normalized it to 0-255
+				mag[i][j][0] = max;
+				mag[i][j][1] = index;
+			}
+		}
+
+	}
+	
+
+	public void calc_direction() {
+		
+		if (mag == null)
+			calc_magnitude();
+		
+		dir = new double[width][height][2];
+		
+
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+
+				int index = (int)mag[i][j][1];
+				double x2 = x[i][j][index];
+				double y2 = y[i][j][index];
+
+				double degree = Math.atan2(y2, x2)*180/Math.PI + 180;//0 - 360
+
+				dir[i][j][0] = degree;
+				dir[i][j][1] = index;
+
+			}
+		}
+	}
+
+
+	public void non_maximum_suppression() {
+
+		if (mag == null)
+			calc_magnitude();
+		if (dir == null)
+			calc_direction();	
+
+		nms = new double[width][height];
+
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+
+				if (i == 0 || i == width-1 || j == 0 || j == height-1) {
+					nms[i][j] = 0;
+					continue;
+				}
+
+				boolean valid = true;
+				double direction = dir[i][j][0]; // 0-360
+
+				
+				if (direction > 45 && direction <=135) {
+					if (mag[i][j][0] < mag[i][j+1][0] || mag[i][j][0] < mag[i][j-1][0]) {
+						valid = false;
+					}
+				
+				} else if (direction > 135 && direction <= 225) {
+					if (mag[i][j][0] < mag[i+1][j][0] || mag[i][j][0] < mag[i-1][j][0]) {
+						valid = false;
+					}
+
+				
+				} else if (direction > 225 && direction <= 315) {
+					if (mag[i][j][0] < mag[i][j+1][0] || mag[i][j][0] < mag[i][j-1][0]) {
+						valid = false;
+					}
+					
+				} else {
+					if (mag[i][j][0] < mag[i+1][j][0] || mag[i][j][0] < mag[i-1][j][0]) {
+						valid = false;
+					}
+				}
+
+				if (valid) {
+					nms[i][j] = mag[i][j][0];
+					
+				} else {
+					nms[i][j] = 0;
+				}
+
+			}
+		}
+
+	}
+
+	
+	public void canny_thresholding() {
+		if (nms == null)
+			non_maximum_suppression();
+		thres = new double[width][height];
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+
+				// thres[i][j] = 2 if strong edge, 1 if weak edge, 0 if none
+				if (nms[i][j] > highT) {
+					thres[i][j] = 2;
+				} else if (nms[i][j] < lowT) {
+					thres[i][j] = 0;
+				} else {
+					thres[i][j] = 1;
+				}
+			}
+		}
+
+	}
+
+
+	public BufferedImage hysterisis_tracking() {
+		canny_thresholding();
+		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+		boolean loop = true;
+
+		while (loop) {
+			loop = false;
+			
+			for (int i = 0; i < width; i++) {
+				for (int j = 0; j < height; j++) {
+
+					// Skip the boundary
+					if (i == 0 || i == width-1 || j == 0 || j == height-1) {
+						continue;
+					}
+
+					// Check for the weak edges 
+					if (thres[i][j] == 1) {
+
+						// If weak edges has strong neighbors in 3x3 area, change it to strong edge.
+						for (int x = -1; x < 2; x ++) {
+							for (int y = -1; y < 2; y++) {
+								if (thres[i+x][j+y] == 2) {
+									loop = true;
+									thres[i][j] = 2;
+								}
+							}
+						}
+
+					}
+				}
+			}
+
+			
+		}
+		
+		// Overwrite the image with yellow color for edges
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+				if (thres[i][j] == 2) {	// Strong edge
+					img.setRGB(i, j, new Color(255, 255, 255).getRGB());
+				}
+					// } else {
+				// 	img.setRGB(i, j, source.image.getRGB(i,j));
+				// }
+			}
+		}
+		return img;
 	}
 	public static void main(String[] args) {
 		new DetectEdge(args.length==1 ? args[0] : "Cabot_Tower.png");
