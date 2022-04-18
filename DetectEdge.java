@@ -11,12 +11,12 @@ import java.util.stream.IntStream;
 public class DetectEdge extends Frame implements ActionListener {
 	BufferedImage input;
 	int width, height;
-	int lowT=10, highT=70, fast_threshold=10, k_value=3;
+	int lowT=10,lowTT=10, highT=70, fast_threshold=10, k_value=3;
 	boolean useColorThreshold = false;
 	CanvasImage source, target;
-	double x[][][], y[][][];		// Matrix for DoG_x and DoG_y
-	double mag[][][], dir[][][];	// Matrix for magnitude and direction
-	double nms[][];				// Matrix for non-max suppression result
+	double x[][][], y[][][];
+	double mag[][][], dir[][][];
+	double nms[][];
 	double thres[][];	
 	CheckboxGroup metrics = new CheckboxGroup();
 	// Constructor
@@ -39,9 +39,12 @@ public class DetectEdge extends Frame implements ActionListener {
 		main.add(source);
 		main.add(target);
 		// prepare the panel for buttons.
-		Panel controls = new Panel(new GridLayout(4,4, 10, 11));
+		Panel controls = new Panel(new GridLayout(4,6, 10, 11));
 		// controls.setBackground(Color.lightGray);
 		Button button = new Button("Moravec Detector");
+		button.addActionListener(this);
+		controls.add(button);
+		button = new Button("Non-max Moravec");
 		button.addActionListener(this);
 		controls.add(button);
 		button = new Button("FAST Detector");
@@ -71,13 +74,11 @@ public class DetectEdge extends Frame implements ActionListener {
 		button = new Button("FAST Canny w/ Blur");
 		button.addActionListener(this);
 		controls.add(button);
-		button = new Button("Non-max Moravec");
-		button.addActionListener(this);
-		controls.add(button);
 		
-		// final BufferedImage blurredImage = approximationFilter(source.image);
-		// BufferedImage blurredImages = grayscale(blurredImage);
-
+		
+		
+		controls.add(new JLabel("SLIDERS: "));
+		
 		JLabel label1 = new JLabel("Moravec Thresh =" + lowT);
 		// label1.setPreferredSize(new Dimension(120, 20));
 		// label1.setBackground(bg);
@@ -102,7 +103,7 @@ public class DetectEdge extends Frame implements ActionListener {
 
 		});
 
-		JLabel label3 = new JLabel("k=" + k_value);
+		JLabel label3 = new JLabel("K-Means k=" + k_value);
 		// label3.setPreferredSize(new Dimension(150, 20));
 		controls.add(label3);
 		JSlider slider3 = new JSlider(0, 16, k_value);
@@ -110,7 +111,31 @@ public class DetectEdge extends Frame implements ActionListener {
 		controls.add(slider3);
 		slider3.addChangeListener(changeEvent -> {
 			k_value = slider3.getValue();
-			label3.setText("k=" + k_value);
+			label3.setText("K-Means k=" + k_value);
+
+		});
+
+		JLabel label4 = new JLabel("lowT=" + lowTT);
+		// label3.setPreferredSize(new Dimension(150, 20));
+		controls.add(label4);
+		JSlider slider4 = new JSlider(1, 128, lowTT);
+		slider4.setPreferredSize(new Dimension(75, 20));
+		controls.add(slider4);
+		slider4.addChangeListener(changeEvent -> {
+			lowTT = slider4.getValue();
+			label4.setText("lowT=" + lowTT);
+
+		});
+
+		JLabel label5 = new JLabel("highT=" + highT);
+		// label3.setPreferredSize(new Dimension(150, 20));
+		controls.add(label5);
+		JSlider slider5 = new JSlider(1, 128, highT);
+		slider5.setPreferredSize(new Dimension(75, 20));
+		controls.add(slider5);
+		slider5.addChangeListener(changeEvent -> {
+			highT = slider5.getValue();
+			label5.setText("highT=" + highT);
 
 		});
 		add("Center", main);
@@ -1111,50 +1136,6 @@ public class DetectEdge extends Frame implements ActionListener {
 
 			}
 		}
-		// 	for (int p=0 ; p<width ; p++ ) {
-		// 		for (int q=0 ; q<height ; q++ ) {
-		// 			img_color = new Color (img.getRGB(p, q));
-	
-		// 			left = p==0 ? p : p-1;
-		// 			middle = p;
-		// 			right = p==width-1 ? p : p+1;
-		// 			up = q==0 ? q : q-1;
-		// 			down = q==height-1 ? q : q+1;
-	
-		// 			float grad_mag_left = img.getRaster().getSample(left, q, 1);
-		// 			float grad_mag_middle = img.getRaster().getSample(middle, q, 0);
-		// 			float grad_mag_right = img.getRaster().getSample(right, q, 0);
-		// 			float grad_mag_up = img.getRaster().getSample(p, up, 0);
-		// 			float grad_mag_down = img.getRaster().getSample(p, down, 0);
-		// 			float grad_mag_up_left = img.getRaster().getSample(left, up, 0);
-		// 			float grad_mag_up_right = img.getRaster().getSample(right, up, 0);
-		// 			float grad_mag_down_left = img.getRaster().getSample(left, down, 0);
-		// 			float grad_mag_down_right = img.getRaster().getSample(right, down, 0);
-					
-		// 			if (grad_mag_middle > 128){
-		// 				rr = 255;
-		// 				gg = 255;
-		// 				bb = 255;
-		// 			}else if (grad_mag_middle == 128){
-					
-		// 			if (grad_mag_left == 255 | grad_mag_right == 255 | grad_mag_up == 255 | grad_mag_down == 255 | grad_mag_up_left == 255 | grad_mag_up_right == 255 | grad_mag_down_left == 255 | grad_mag_down_right == 255){
-		// 				rr = 255;
-		// 				gg = 255;
-		// 				bb = 255;
-		// 			}else{
-		// 				rr = 0;
-		// 				gg = 0;
-		// 				bb = 0;
-		// 			}
-		// 			}else{
-		// 				rr = 0;
-		// 				gg = 0;
-		// 				bb = 0;
-		// 			}
-		// 			img.setRGB(p, q, new Color(rr, gg, bb).getRGB());
-	
-		// 		}
-		// }
 		return img;
 	}
 	public BufferedImage grayscale(BufferedImage img){
@@ -1388,7 +1369,6 @@ public class DetectEdge extends Frame implements ActionListener {
 		if (y == null)
 			calc_DoG_y();
 
-		// mat[0] for magnitude, mat[1] for channel index
 		mag = new double[width][height][2];
 		for (int i = 0; i < width; i++) {
 			for (int j = 0; j < height; j++) {
@@ -1404,7 +1384,6 @@ public class DetectEdge extends Frame implements ActionListener {
 				double mb = Math.sqrt(Math.pow(b1, 2) + Math.pow(b2, 2)); 
 
 				double index, max;
-				// index = 0 if red is max, 1 if green is max, 2 if blue is max
 				if (mr >= mg) {
 					if (mr >= mb) {
 						max = mr;
@@ -1423,7 +1402,7 @@ public class DetectEdge extends Frame implements ActionListener {
 					}	
 				}
 				
-				max = Math.max(0, Math.min(max, 255));	// Normalized it to 0-255
+				max = Math.max(0, Math.min(max, 255));
 				mag[i][j][0] = max;
 				mag[i][j][1] = index;
 			}
@@ -1520,10 +1499,9 @@ public class DetectEdge extends Frame implements ActionListener {
 		for (int i = 0; i < width; i++) {
 			for (int j = 0; j < height; j++) {
 
-				// thres[i][j] = 2 if strong edge, 1 if weak edge, 0 if none
 				if (nms[i][j] > highT) {
 					thres[i][j] = 2;
-				} else if (nms[i][j] < lowT) {
+				} else if (nms[i][j] < lowTT) {
 					thres[i][j] = 0;
 				} else {
 					thres[i][j] = 1;
@@ -1546,15 +1524,12 @@ public class DetectEdge extends Frame implements ActionListener {
 			for (int i = 0; i < width; i++) {
 				for (int j = 0; j < height; j++) {
 
-					// Skip the boundary
 					if (i == 0 || i == width-1 || j == 0 || j == height-1) {
 						continue;
 					}
 
-					// Check for the weak edges 
 					if (thres[i][j] == 1) {
 
-						// If weak edges has strong neighbors in 3x3 area, change it to strong edge.
 						for (int x = -1; x < 2; x ++) {
 							for (int y = -1; y < 2; y++) {
 								if (thres[i+x][j+y] == 2) {
@@ -1571,15 +1546,12 @@ public class DetectEdge extends Frame implements ActionListener {
 			
 		}
 		
-		// Overwrite the image with yellow color for edges
 		for (int i = 0; i < width; i++) {
 			for (int j = 0; j < height; j++) {
-				if (thres[i][j] == 2) {	// Strong edge
+				if (thres[i][j] == 2) {	
 					img.setRGB(i, j, new Color(255, 255, 255).getRGB());
 				}
-					// } else {
-				// 	img.setRGB(i, j, source.image.getRGB(i,j));
-				// }
+					
 			}
 		}
 		return img;
