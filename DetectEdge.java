@@ -71,10 +71,14 @@ public class DetectEdge extends Frame implements ActionListener {
 		button = new Button("FAST Canny w/ Blur");
 		button.addActionListener(this);
 		controls.add(button);
+		button = new Button("Non-max Moravec");
+		button.addActionListener(this);
+		controls.add(button);
+		
 		// final BufferedImage blurredImage = approximationFilter(source.image);
 		// BufferedImage blurredImages = grayscale(blurredImage);
 
-		JLabel label1 = new JLabel("Moravec Threshold =" + lowT);
+		JLabel label1 = new JLabel("Moravec Thresh =" + lowT);
 		// label1.setPreferredSize(new Dimension(120, 20));
 		// label1.setBackground(bg);
 		controls.add(label1);
@@ -83,7 +87,7 @@ public class DetectEdge extends Frame implements ActionListener {
 		controls.add(slider1);
 		slider1.addChangeListener(changeEvent -> {
 			lowT = slider1.getValue();
-			label1.setText("Moravec Threshold=" + lowT);
+			label1.setText("Moravec Thresh=" + lowT);
 
 		});
 		JLabel label2 = new JLabel("FAST Thresh=" + fast_threshold);
@@ -138,7 +142,10 @@ public class DetectEdge extends Frame implements ActionListener {
 		} else if ( ((Button)e.getSource()).getLabel().equals("Moravec Detector") ) {
 			source.resetImage(input);
 			target.resetImage(moravec(source.image));
-		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
+		} else if ( ((Button)e.getSource()).getLabel().equals("Non-max Moravec") ) {
+			source.resetImage(input);
+			target.resetImage(non_max_moravec(source.image));
+		} else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector") ) {
 			source.resetImage(input);
 			target.resetImage(FAST((source.image)));
 		}  else if ( ((Button)e.getSource()).getLabel().equals("FAST Detector w/ Blur") ) {
@@ -481,25 +488,153 @@ public class DetectEdge extends Frame implements ActionListener {
 			
 			return patch;
 
-		}
-			
+		}		
 	}
+
+	public double[] ssd_min(int p, int q, BufferedImage img){
+		double[] result = new double[3];
+
+		Color[] current_Patch = patch_maker(p, q, img);
+		Color[] left_Patch = patch_maker(p-1, q, img);
+		Color[] right_Patch = patch_maker(p+1, q, img);
+		Color[] up_Patch = patch_maker(p, q-1, img);
+		Color[] down_Patch = patch_maker(p, q+1, img);
+		Color[] left_up_Patch = patch_maker(p-1, q-1, img);
+		Color[] left_down_Patch = patch_maker(p-1, q+1, img);
+		Color[] right_up_Patch = patch_maker(p+1, q-1, img);
+		Color[] right_down_Patch = patch_maker(p+1, q+1, img);
+		
+		double[] ssd_left = SSD(current_Patch, left_Patch);
+		double[] ssd_right = SSD(current_Patch, right_Patch);
+		double[] ssd_center = SSD(current_Patch, current_Patch);
+		double[] ssd_up = SSD(current_Patch, up_Patch);
+		double[] ssd_down = SSD(current_Patch, down_Patch);
+		double[] ssd_left_up = SSD(current_Patch, left_up_Patch);
+		double[] ssd_left_down = SSD(current_Patch, left_down_Patch);
+		double[] ssd_right_up = SSD(current_Patch, right_up_Patch);
+		double[] ssd_right_down = SSD(current_Patch, right_down_Patch);
+
+		double[][] patch = new double[8][3];
+		patch[0] = ssd_left;
+		patch[1] = ssd_right;
+		patch[2] = ssd_up;
+		patch[3] = ssd_down;
+		patch[4] = ssd_left_up;
+		patch[5] = ssd_left_down;
+		patch[6] = ssd_right_up;
+		patch[7] = ssd_right_down;
+
+		result = min_ssd(patch);
+		return result;
+	}
+
+	public BufferedImage non_max_moravec(BufferedImage img) {
+		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		BufferedImage result_final = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		int total_corners = 0;
+
+		int[][] corners = new int[width][height];
+		for (int[] row: corners)
+			Arrays.fill(row, 0);
+		
+		for ( int q=4 ; q<height-4 ; q++ ) {
+			for ( int p=4 ; p<width-4 ; p++ ) {
+				
+				double threshold = lowT;
+				double[] min_patch = new double[3];
+				min_patch = ssd_min(p,q,img);
+
+				if (min_patch[0] > threshold && min_patch[1] > threshold && min_patch[2] > threshold){
+
+					boolean greatest = true;
+					if (corners[p-1][q] == 1){
+						if (ssd_min(p-1,q,img)[0]+ssd_min(p-1,q,img)[1]+ssd_min(p-1,q,img)[2] < ssd_min(p,q,img)[0]+ssd_min(p,q,img)[1]+ssd_min(p,q,img)[2]){
+							corners[p-1][q] = 0;
+							result.setRGB(p-1, q, new Color(0, 0, 0).getRGB());
+						}
+						else {
+							greatest = false;
+						}
+					}
+					if (corners[p-1][q-1] == 1){
+						if (ssd_min(p-1,q-1,img)[0]+ssd_min(p-1,q-1,img)[1]+ssd_min(p-1,q-1,img)[2] < ssd_min(p,q,img)[0]+ssd_min(p,q,img)[1]+ssd_min(p,q,img)[2]){
+							corners[p-1][q-1] = 0;
+							result.setRGB(p-1, q-1, new Color(0, 0, 0).getRGB());
+						}
+						else {
+							greatest = false;
+						}
+					}
+					if (corners[p][q-1] == 1){
+						if (ssd_min(p,q-1,img)[0]+ssd_min(p,q-1,img)[1]+ssd_min(p,q-1,img)[2] < ssd_min(p,q,img)[0]+ssd_min(p,q,img)[1]+ssd_min(p,q,img)[2]){
+							corners[p][q-1] = 0;
+							result.setRGB(p, q-1, new Color(0, 0, 0).getRGB());
+						}
+						else {
+							greatest = false;
+						}
+					}
+					if (corners[p+1][q-1] == 1){
+						if (ssd_min(p+1,q-1,img)[0]+ssd_min(p+1,q-1,img)[1]+ssd_min(p+1,q-1,img)[2] < ssd_min(p,q,img)[0]+ssd_min(p,q,img)[1]+ssd_min(p,q,img)[2]){
+							corners[p+1][q-1] = 0;
+							result.setRGB(p+1, q-1, new Color(0, 0, 0).getRGB());
+						}
+						else {
+							greatest = false;
+						}
+					}
+					if (greatest){
+						corners[p][q] = 1;
+						result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+						break;
+					}
+				}		
+			}
+		}
+		Color black = new Color(0,0,0);
+		for ( int k=1 ; k<height-1 ; k++ ) {
+			for ( int l=1 ; l<width-1 ; l++ ) {
+
+				if (result.getRGB(l, k) == black.getRGB()){
+					result_final.setRGB(l, k, img.getRGB(l, k));
+				} else{
+					result_final.setRGB(l, k, result.getRGB(l,k));
+
+				}
+			}
+		}
+
+		for ( int k=0 ; k<height ; k++ ) {
+			for ( int l=0 ; l<width ; l++ ) {
+
+				if (corners[l][k] == 1){
+					Color color = new Color(255, 255, 0);
+					int c = color.getRGB();
+					int p = l;
+					int q = k;
+					total_corners++;
+					bresenham_circle_draw(l, k, result_final);
+					result_final.setRGB(l, k, result.getRGB(l,k));
+				}
+			}
+		}
+		System.out.println("Non-max Moravec: Total Corners Detected: " + total_corners);
+
+		return result_final;
+	}
+
 
 	public BufferedImage moravec(BufferedImage img) {
 		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		BufferedImage result_final = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		int total_corners = 0;
 
-		double[][] output_array = new double[width][height];
-
+		int[][] corners = new int[width][height];
+		for (int[] row: corners)
+			Arrays.fill(row, 0);
 		
 		for ( int q=1 ; q<height-1 ; q++ ) {
 			for ( int p=1 ; p<width-1 ; p++ ) {
-				
-				// left = p==0 ? p : p-1;
-				// middle = p;
-				// right = p==width-1 ? p : p+1;
-				// up = q==0 ? q : q-1;
-				// down = q==height-1 ? q : q+1;
 				
 				Color[] current_Patch = patch_maker(p, q, img);
 				Color[] left_Patch = patch_maker(p-1, q, img);
@@ -539,48 +674,40 @@ public class DetectEdge extends Frame implements ActionListener {
 
 				if (min_patch[0] > threshold && min_patch[1] > threshold && min_patch[2] > threshold){
 						result.setRGB(p, q, new Color(255, 0, 0).getRGB());
+						corners[p][q] = 1;
 					}
-				// if (ssd_left[0] > threshold &&
-				// 	ssd_right[0] > threshold &&
-				// 	ssd_up[0] > threshold &&
-				// 	ssd_down[0] > threshold &&
-				// 	ssd_left_up[0] > threshold &&
-				// 	ssd_left_down[0] > threshold &&
-				// 	ssd_right_up[0] > threshold &&
-				// 	ssd_right_down[0] > threshold &&
-				// 	ssd_left[1] > threshold &&
-				// 	ssd_right[1] > threshold &&
-				// 	ssd_up[1] > threshold &&
-				// 	ssd_down[1] > threshold &&
-				// 	ssd_left_up[1] > threshold &&
-				// 	ssd_left_down[1] > threshold &&
-				// 	ssd_right_up[1] > threshold &&
-				// 	ssd_right_down[1] > threshold &&
-				// 	ssd_left[2] > threshold &&
-				// 	ssd_right[2] > threshold &&
-				// 	ssd_up[2] > threshold &&
-				// 	ssd_down[2] > threshold &&
-				// 	ssd_left_up[2] > threshold &&
-				// 	ssd_left_down[2] > threshold &&
-				// 	ssd_right_up[2] > threshold &&
-				// 	ssd_right_down[2] > threshold){
-				// 		result.setRGB(p, q, new Color(255, 0, 0).getRGB());
-				// 	}
-				
 			}
+		}
+
 		Color black = new Color(0,0,0);
 		for ( int k=1 ; k<height-1 ; k++ ) {
 			for ( int l=1 ; l<width-1 ; l++ ) {
 
 				if (result.getRGB(l, k) == black.getRGB()){
 					result_final.setRGB(l, k, img.getRGB(l, k));
-				}else{
+				} else{
 					result_final.setRGB(l, k, result.getRGB(l,k));
 
 				}
 			}
 		}
+
+		for ( int k=4 ; k<height-4 ; k++ ) {
+			for ( int l=4 ; l<width-4 ; l++ ) {
+
+				if (corners[l][k] == 1){
+					Color color = new Color(255, 255, 0);
+					int c = color.getRGB();
+					int p = l;
+					int q = k;
+					total_corners++;
+					bresenham_circle_draw(l, k, result_final);
+					result_final.setRGB(l, k, result.getRGB(l,k));
+				}
+			}
 		}
+		System.out.println("Moravec: Total Corners Detected: " + total_corners);
+
 		return result_final;
 	}
 
